@@ -1,12 +1,40 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, UploadFile,Form
 from app.database import db_session
 from app.users import education_models as models
 from app.users import education_schema as schemas
 from sqlalchemy.orm import defer
+import os
 routes=APIRouter(
     prefix="/educations",
     tags=["Educations"]
 )
+
+
+@routes.post("/file/upload")
+async def uploadDocument(
+    user: str=Form(...),
+    document_type: int=Form(...),
+    file: UploadFile = File(...)
+):
+    db=next(db_session())
+    try:
+        file_location = os.path.join(f"uploads/education/{user}", file.filename)
+        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        with open(file_location, "wb") as file_object:
+            file_object.write(file.file.read())
+        if document_type==1:
+            data={"grades":file_location}
+        elif document_type==2:
+            data={"certificate":file_location}
+        else:
+            raise HTTPException(status_code=400, detail="Type does not exist.")
+        doc=db.query(models.Education).filter(models.Education.user==user).update(values=data)
+        #db.add(doc)
+        db.commit()
+        return {"info": "File uploaded successfully"}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
 
 @routes.post("/create")
 def createEducation(req:schemas.insertEducation):
