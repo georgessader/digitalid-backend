@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, UploadFile,Form
+import os
 from app.database import db_session
 from app.users import health_models as models
 from app.users import health_schemas as schemas
@@ -8,6 +9,38 @@ routes=APIRouter(
     prefix="/health",
     tags=["Health"]
 )
+
+@routes.post("/file/upload")
+async def uploadDocument(
+    user: str=Form(...),
+    health_id:int=Form(...),
+    document_type: int=Form(...),
+    expiry_date: str=Form(None),
+    file: UploadFile = File(...)
+):
+    db=next(db_session())
+    try:
+        file_location = os.path.join(f"uploads/health/{user}", file.filename)
+        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        with open(file_location, "wb") as file_object:
+            file_object.write(file.file.read())
+        if document_type==1:
+            data={"health_report":file_location}
+        elif document_type==2:
+            data={"vaccination_report":file_location}
+        elif document_type==3:
+            if not expiry_date:
+                raise HTTPException(status_code=400, detail="Expiry Date is required.")
+            data={"insurance_doc":file_location,"insurance_expiry_date":expiry_date}
+        else:
+            raise HTTPException(status_code=400, detail="Type does not exist.")
+        doc=db.query(models.Health).filter(models.Health.id==health_id).update(values=data)
+        #db.add(doc)
+        db.commit()
+        return {"info": "File uploaded successfully"}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
 
 @routes.post("/create")
 def createHealth(req:schemas.insertHealth):

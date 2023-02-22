@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, UploadFile, Form
+import os
 from app.database import db_session
 from app.users import career_models as models
 from app.users import careers_schemas as schemas
@@ -8,6 +9,33 @@ routes=APIRouter(
     prefix="/career",
     tags=["Career"]
 )
+
+@routes.post("/file/upload")
+async def uploadDocument(
+    user: str=Form(...),
+    career_id:int=Form(...),
+    document_type: int=Form(...),
+    file: UploadFile = File(...)
+):
+    db=next(db_session())
+    try:
+        file_location = os.path.join(f"uploads/career/{user}", file.filename)
+        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        with open(file_location, "wb") as file_object:
+            file_object.write(file.file.read())
+        if document_type==1:
+            data={"cv":file_location}
+        elif document_type==2:
+            data={"cover_letter":file_location}
+        else:
+            raise HTTPException(status_code=400, detail="Type does not exist.")
+        doc=db.query(models.Career).filter(models.Career.id==career_id).update(values=data)
+        #db.add(doc)
+        db.commit()
+        return {"info": "File uploaded successfully"}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
 
 @routes.post("/create")
 def createCareer(req:schemas.insertCareer):

@@ -13,6 +13,7 @@ routes=APIRouter(
 @routes.post("/file/upload")
 async def uploadDocument(
     user: str=Form(...),
+    education_id:int=Form(...),
     document_type: int=Form(...),
     file: UploadFile = File(...)
 ):
@@ -28,7 +29,7 @@ async def uploadDocument(
             data={"certificate":file_location}
         else:
             raise HTTPException(status_code=400, detail="Type does not exist.")
-        doc=db.query(models.Education).filter(models.Education.user==user).update(values=data)
+        doc=db.query(models.Education).filter(models.Education.id==education_id).update(values=data)
         #db.add(doc)
         db.commit()
         return {"info": "File uploaded successfully"}
