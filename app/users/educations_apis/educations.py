@@ -24,9 +24,21 @@ async def uploadDocument(
         with open(file_location, "wb") as file_object:
             file_object.write(file.file.read())
         if document_type==1:
-            data={"grades":file_location}
+            data={
+                "grades":file_location,
+                "grade_verified":False,
+                "grade_verification_status":"pending",
+                "education_verified":False,
+                "education_verification_status":"pending"
+            }
         elif document_type==2:
-            data={"certificate":file_location}
+            data={
+                "certificate":file_location,
+                "certificate_verified":False,
+                "certificate_verification_status":"pending",
+                "education_verified":False,
+                "education_verification_status":"pending"
+            }
         else:
             raise HTTPException(status_code=400, detail="Type does not exist.")
         doc=db.query(models.Education).filter(models.Education.id==education_id).update(values=data)
@@ -91,3 +103,47 @@ def deleteEducation(education_id:int):
         return {"detail":"Education delete"}
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
+@routes.patch("/verify/{user_id}")
+def verifyEducation(user_id:str,req:schemas.verifyEducation):
+    db=next(db_session())
+    try:
+        education=db.query(models.Education).filter(models.Education.user==user_id)
+        if not education.first():
+            raise HTTPException(status_code=400, detail="Education does not exist.")
+        grade_status=""
+        certificate_status=""
+        if req.grade_verified:
+            grade_status="verified"
+        elif req.grade_verified==False:
+            grade_status="rejected"
+        if req.certificate_verified:
+            certificate_status="verified"
+        elif req.certificate_verified==False:
+            certificate_status="rejected"
+        data={
+            **req.dict(exclude_none=True),
+            "grade_verification_status":grade_status if grade_status!="" else education.first().grade_verification_status,
+            "certificate_verification_status":certificate_status if certificate_status!="" else education.first().certificate_verification_status
+        }
+        education.update(values=data)
+        db.commit()
+        check_verification=db.query(models.Education).filter(models.Education.user==user_id)
+        if check_verification.first().grade_verified and check_verification.first().certificate_verified:
+            data={
+                "education_verified":True,
+                "education_verification_status":"verified"
+            }
+            check_verification.update(values=data)
+            db.commit()
+        else:
+            data={
+                "education_verified":False,
+                "education_verification_status":"Rejected"
+            }
+            check_verification.update(values=data)
+            db.commit()
+        return {"detail":"Verification updated."}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+

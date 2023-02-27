@@ -25,13 +25,32 @@ async def uploadDocument(
         with open(file_location, "wb") as file_object:
             file_object.write(file.file.read())
         if document_type==1:
-            data={"health_report":file_location}
+            data={
+                "health_report":file_location,
+                "health_report_verified":False,
+                "health_report_verification_status":"pending",
+                "health_verification":False,
+                "health_verification_status":"pending"
+            }
         elif document_type==2:
-            data={"vaccination_report":file_location}
+            data={
+                "vaccination_report":file_location,
+                "vaccination_verified":False,
+                "vaccination_verification_status":"pending",
+                "health_verification":False,
+                "health_verification_status":"pending"
+            }
         elif document_type==3:
             if not expiry_date:
                 raise HTTPException(status_code=400, detail="Expiry Date is required.")
-            data={"insurance_doc":file_location,"insurance_expiry_date":expiry_date}
+            data={
+                "insurance_doc":file_location,
+                "insurance_expiry_date":expiry_date,
+                "insurance_verified":False,
+                "insurance_verification_status":"pending",
+                "health_verification":False,
+                "health_verification_status":"pending"
+            }
         else:
             raise HTTPException(status_code=400, detail="Type does not exist.")
         doc=db.query(models.Health).filter(models.Health.id==health_id).update(values=data)
@@ -96,3 +115,53 @@ def deleteEducation(health_id:int):
         return {"detail":"Health delete"}
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
+@routes.patch("/verify/{user_id}")
+def verifyHealth(user_id:str,req:schemas.verifyHealth):
+    db=next(db_session())
+    try:
+        health=db.query(models.Health).filter(models.Health.user==user_id)
+        if not health.first():
+            raise HTTPException(status_code=400, detail="Health does not exist.")
+        health_report_status=""
+        vaccination_status=""
+        insurance_status=""
+        if req.health_report_verified:
+            health_report_status="verified"
+        elif req.health_report_verified==False:
+            health_report_status="rejected"
+        if req.vaccination_verified:
+            vaccination_status="verified"
+        elif req.vaccination_verified==False:
+            vaccination_status="rejected"
+        if req.health_report_verified:
+            insurance_status="verified"
+        elif req.health_report_verified==False:
+            insurance_status="rejected"
+        data={
+            **req.dict(exclude_none=True),
+            "health_report_verification_status":health_report_status if health_report_status!="" else health.first().health_report_education_status,
+            "vaccination_verification_status":vaccination_status if vaccination_status!="" else health.first().vaccination_verification_status,
+            "insurance_verification_status":insurance_status if insurance_status!="" else health.first().insurance_verification_status
+        }
+        health.update(values=data)
+        db.commit()
+        check_health=db.query(models.Health).filter(models.Health.user==user_id)
+        if check_health.first().health_report_verified and check_health.first().vaccination_verified and check_health.first().insurance_verified:
+            data={
+                "health_verification":True,
+                "health_verification_status":"verified"
+            }
+            check_health.update(values=data)
+            db.commit()
+        else:
+            data={
+                "health_verification":False,
+                "health_verification_status":"rejected"
+            }
+            check_health.update(values=data)
+            db.commit()
+        return {"detail":"Verification updated."}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+

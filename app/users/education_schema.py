@@ -18,4 +18,9 @@ class updateEducation(BaseModel):
     credits_completed : Optional[int]
     gpa: Optional[float]
     college_name : Optional[str]
+
+class verifyEducation(BaseModel):
+    grade_verified : Optional[bool]
+    certificate_verified : Optional[bool]
+
     

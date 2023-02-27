@@ -18,3 +18,7 @@ class updateCareer(BaseModel):
     years_experience : Optional[int]
     job_title : Optional[str]
     company_name : Optional[str]
+
+class verifyCareer(BaseModel):
+    cv_verified : Optional[bool]
+    cover_letter_verified : Optional[bool]

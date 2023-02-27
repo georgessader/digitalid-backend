@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Form, UploadFile, File
+import os
 from app.database import db_session
 from app.users import user_models
 from app.users import user_schema
@@ -8,6 +9,45 @@ routes=APIRouter(
     prefix="/users",
     tags=["Users"]
 )
+
+
+@routes.post("/file/upload")
+async def uploadDocument(
+    user: str=Form(...),
+    document_type: int=Form(...),
+    file: UploadFile = File(...)
+):
+    db=next(db_session())
+    try:
+        file_location = os.path.join(f"uploads/user/{user}", file.filename)
+        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        with open(file_location, "wb") as file_object:
+            file_object.write(file.file.read())
+        if document_type==1:
+            data={
+                "id_image":file_location,
+                "id_image_verified":False,
+                "id_image_verification_status":"pending",
+                "user_verified":False,
+                "user_verification_status":"pending"
+            }
+        elif document_type==2:
+            data={
+                "selfie":file_location,
+                "selfie_verified":False,
+                "selfie_verification_status":"pending",
+                "user_verified":False,
+                "user_verification_status":"pending"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Type does not exist.")
+        doc=db.query(user_models.Users).filter(user_models.Users.id==user).update(values=data)
+        #db.add(doc)
+        db.commit()
+        return {"info": "File uploaded successfully"}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
 
 @routes.post("/register")
 def createUser( req:user_schema.insertUser):

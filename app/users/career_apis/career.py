@@ -24,9 +24,21 @@ async def uploadDocument(
         with open(file_location, "wb") as file_object:
             file_object.write(file.file.read())
         if document_type==1:
-            data={"cv":file_location}
+            data={
+                "cv":file_location,
+                "cv_verified":False,
+                "cv_verification_status":"pending",
+                "career_verified":False,
+                "career_verification_status":"pending"
+            }
         elif document_type==2:
-            data={"cover_letter":file_location}
+            data={
+                "cover_letter":file_location,
+                "cover_letter_verified":False,
+                "cover_letter_verification_status":"pending",
+                "career_verified":False,
+                "career_verification_status":"pending"
+            }
         else:
             raise HTTPException(status_code=400, detail="Type does not exist.")
         doc=db.query(models.Career).filter(models.Career.id==career_id).update(values=data)
@@ -89,5 +101,49 @@ def deleteCareer(career_id:int):
         career.delete()
         db.commit()
         return {"detail":"Career delete"}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
+
+@routes.patch("/verify/{user_id}")
+def verifyCareer(user_id:str,req:schemas.verifyCareer):
+    db=next(db_session())
+    try:
+        career=db.query(models.Career).filter(models.Career.user==user_id)
+        if not career.first():
+            raise HTTPException(status_code=400, detail="Career does not exist.")
+        cv_status=""
+        cover_status=""
+        if req.cv_verified:
+            cv_status="verified"
+        elif req.cv_verified==False:
+            cv_status="rejected"
+        if req.cover_letter_verified:
+            cover_status="verified"
+        elif req.cover_letter_verified==False:
+            cover_status="rejected"
+        data={
+            **req.dict(exclude_none=True),
+            "cv_verification_status":cv_status if cv_status!="" else career.first().cv_verification_status,
+            "cover_letter_verification_status":cover_status if cover_status!="" else career.first().cover_letter_verification_status
+        }
+        career.update(values=data)
+        db.commit()
+        check_verification=db.query(models.Career).filter(models.Career.user==user_id)
+        if check_verification.first().cv_verified and check_verification.first().cover_letter_verified:
+            data={
+                "career_verified":True,
+                "career_verification_status":"verified"
+            }
+            check_verification.update(values=data)
+            db.commit()
+        else:
+            data={
+                "career_verified":False,
+                "career_verification_status":"Rejected"
+            }
+            check_verification.update(values=data)
+            db.commit()
+        return {"detail":"Verification updated."}
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)

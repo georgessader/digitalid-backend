@@ -18,6 +18,8 @@ class Health(Base):
     insurance_expiry_date = Column(Date)
     health_report_verified = Column(Boolean)
     health_report_verification_status = Column(String(50))
+    vaccination_verified = Column(Boolean)
+    vaccination_verification_status = Column(String(50))
     insurance_verified = Column(Boolean)
     insurance_verification_status = Column(String(50))
     health_verification = Column(Boolean)
