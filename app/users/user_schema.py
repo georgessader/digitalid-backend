@@ -41,3 +41,7 @@ class ResetPassword(BaseModel):
     )
     id_number: str=Query(...)
     password: str=Query(..., min_length=1, max_length=128)
+
+class verifyUser(BaseModel):
+    id_image_verified:Optional[bool]
+    selfie_verified:Optional[bool]

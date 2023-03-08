@@ -4,6 +4,7 @@ from app.database import db_session
 from app.users import career_models as models
 from app.users import careers_schemas as schemas
 from sqlalchemy.orm import defer
+from app.users.tools import checkAdmin
 
 routes=APIRouter(
     prefix="/career",
@@ -60,10 +61,11 @@ def createCareer(req:schemas.insertCareer):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.get("/all")
-def getAllCareers():
+@routes.get("/all/{token}")
+def getAllCareers(token:str):
     db=next(db_session())
     try:
+        checkAdmin(token)
         career=db.query(models.Career).order_by(models.Career.id.desc()).all()
         return {"detail":career}
     except HTTPException as http_error:
@@ -105,10 +107,11 @@ def deleteCareer(career_id:int):
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
 
-@routes.patch("/verify/{user_id}")
-def verifyCareer(user_id:str,req:schemas.verifyCareer):
+@routes.patch("/verify/{user_id}/{token}")
+def verifyCareer(user_id:str,token:str,req:schemas.verifyCareer):
     db=next(db_session())
     try:
+        checkAdmin(token)
         career=db.query(models.Career).filter(models.Career.user==user_id)
         if not career.first():
             raise HTTPException(status_code=400, detail="Career does not exist.")

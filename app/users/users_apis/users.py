@@ -4,7 +4,7 @@ from app.database import db_session
 from app.users import user_models
 from app.users import user_schema
 from sqlalchemy.orm import defer
-from app.users.tools import (hash_password, check_birthday,check_names,check_password,verify_password)
+from app.users.tools import (hash_password, check_birthday,check_names,check_password,verify_password, checkAdmin)
 routes=APIRouter(
     prefix="/users",
     tags=["Users"]
@@ -142,13 +142,29 @@ def getUserDetail(user_id:str):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.post("/admin/assign/{user_id}")
-def asssignAdmin(user_id:str):
+@routes.get("/all/{token}")
+def getAllUsers(token:str):
+    """
+    Endpoint to get all users detail
+    """
+    db=next(db_session())
+    try:
+        checkAdmin(token)
+        user=db.query(user_models.Users).options(defer("password")).all()
+        
+        return user
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
+
+
+@routes.post("/admin/assign/{user_id}/{token}")
+def asssignAdmin(user_id:str, token:str):
     """
     Endpoint to assign an admin
     """
     db=next(db_session())
     try:
+        checkAdmin(token)
         user=db.query(user_models.Users).filter(user_models.Users.id==user_id)
         if not user.first():
             raise HTTPException(status_code=400, detail="User Not Found.")
@@ -158,13 +174,14 @@ def asssignAdmin(user_id:str):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.post("/admin/remove/{user_id}")
-def removeAdmin(user_id:str):
+@routes.post("/admin/remove/{user_id}/{token}")
+def removeAdmin(user_id:str, token:str):
     """
     Endpoint to remove an admin
     """
     db=next(db_session())
     try:
+        checkAdmin(token)
         user=db.query(user_models.Users).filter(user_models.Users.id==user_id)
         if not user.first():
             raise HTTPException(status_code=400, detail="User Not Found.")
@@ -174,3 +191,46 @@ def removeAdmin(user_id:str):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
+@routes.patch("/verify/{user_id}/{token}")
+def verifyUser(user_id:str,token:str,req:user_schema.verifyUser):
+    db=next(db_session())
+    try:
+        checkAdmin(token)
+        user=db.query(user_models.Users).filter(user_models.Users.id==user_id)
+        if not user.first():
+            raise HTTPException(status_code=400, detail="User does not exist.")
+        id_status=""
+        selfie_status=""
+        if req.selfie_verified:
+            selfie_status="verified"
+        elif req.selfie_verified==False:
+            selfie_status="rejected"
+        if req.id_image_verified:
+            id_status="verified"
+        elif req.id_image_verified==False:
+            id_status="rejected"
+        data={
+            **req.dict(exclude_none=True),
+            "id_image_verification_status":id_status if id_status!="" else user.first().id_image_verification_status,
+            "selfie_verification_status":selfie_status if selfie_status!="" else user.first().selfie_verification_status
+        }
+        user.update(values=data)
+        db.commit()
+        check_user=db.query(user_models.Users).filter(user_models.Users.id==user_id)
+        if check_user.first().id_image_verified and check_user.first().selfie_verified:
+            data={
+                "user_verified":True,
+                "user_verification_status":"verified"
+            }
+            check_user.update(values=data)
+            db.commit()
+        else:
+            data={
+                "user_verified":False,
+                "user_verification_status":"rejected"
+            }
+            check_user.update(values=data)
+            db.commit()
+        return {"detail":"Verification updated."}
+    except HTTPException as http_error:
+        raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)

@@ -3,6 +3,7 @@ from app.database import db_session
 from app.users import education_models as models
 from app.users import education_schema as schemas
 from sqlalchemy.orm import defer
+from app.users.tools import checkAdmin
 import os
 routes=APIRouter(
     prefix="/educations",
@@ -19,7 +20,7 @@ async def uploadDocument(
 ):
     db=next(db_session())
     try:
-        file_location = os.path.join(f"uploads/education/{user}", file.filename)
+        file_location = os.path.join(f"../digitalid/public/uploads/education/{user}", file.filename)
         os.makedirs(os.path.dirname(file_location), exist_ok=True)
         with open(file_location, "wb") as file_object:
             file_object.write(file.file.read())
@@ -60,10 +61,11 @@ def createEducation(req:schemas.insertEducation):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.get("/all")
-def getAllEducation():
+@routes.get("/all/{token}")
+def getAllEducation(token:str):
     db=next(db_session())
     try:
+        checkAdmin(token)
         education=db.query(models.Education).order_by(models.Education.id.desc()).all()
         return {"detail":education}
     except HTTPException as http_error:
@@ -104,10 +106,11 @@ def deleteEducation(education_id:int):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.patch("/verify/{user_id}")
-def verifyEducation(user_id:str,req:schemas.verifyEducation):
+@routes.patch("/verify/{user_id}/{token}")
+def verifyEducation(user_id:str,token:str,req:schemas.verifyEducation):
     db=next(db_session())
     try:
+        checkAdmin(token)
         education=db.query(models.Education).filter(models.Education.user==user_id)
         if not education.first():
             raise HTTPException(status_code=400, detail="Education does not exist.")

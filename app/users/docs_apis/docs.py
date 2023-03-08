@@ -4,6 +4,7 @@ from app.users import docs_models as models
 from app.users import docs_schemas as schemas
 from sqlalchemy.orm import defer
 from datetime import datetime
+from app.users.tools import checkAdmin
 import os
 routes=APIRouter(
     prefix="/docs",
@@ -22,10 +23,11 @@ def RequestDocument(req:schemas.requestDoc):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.get("/all")
-def getAllRequestedDocs():
+@routes.get("/all/{token}")
+def getAllRequestedDocs(token:str):
     db=next(db_session())
     try:
+        checkAdmin(token)
         docs=db.query(models.Requested_docs).order_by(models.Requested_docs.expected_date.desc()).all()
         return {"detail":docs}
     except HTTPException as http_error:

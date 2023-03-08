@@ -4,6 +4,7 @@ from app.database import db_session
 from app.users import health_models as models
 from app.users import health_schemas as schemas
 from sqlalchemy.orm import defer
+from app.users.tools import checkAdmin
 
 routes=APIRouter(
     prefix="/health",
@@ -72,10 +73,11 @@ def createHealth(req:schemas.insertHealth):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.get("/all")
-def getAllHealth():
+@routes.get("/all/{token}")
+def getAllHealth(token:str):
     db=next(db_session())
     try:
+        checkAdmin(token)
         health=db.query(models.Health).order_by(models.Health.id.desc()).all()
         return {"detail":health}
     except HTTPException as http_error:
@@ -116,10 +118,11 @@ def deleteEducation(health_id:int):
     except HTTPException as http_error:
         raise HTTPException(status_code=http_error.status_code, detail=http_error.detail)
 
-@routes.patch("/verify/{user_id}")
-def verifyHealth(user_id:str,req:schemas.verifyHealth):
+@routes.patch("/verify/{user_id}/{token}")
+def verifyHealth(user_id:str,token:str,req:schemas.verifyHealth):
     db=next(db_session())
     try:
+        checkAdmin(token)
         health=db.query(models.Health).filter(models.Health.user==user_id)
         if not health.first():
             raise HTTPException(status_code=400, detail="Health does not exist.")
