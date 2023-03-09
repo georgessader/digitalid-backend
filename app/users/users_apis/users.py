@@ -68,7 +68,9 @@ def createUser( req:user_schema.insertUser):
         if req.password!=req.confirm_password:
             raise HTTPException(status_code=400, detail="Password doesn't matches.")
         req.password=hash_password(req.password)
-        user=user_models.Users(**req.dict(exclude_none=True))
+        req=req.dict(exclude_none=True)
+        del req["confirm_password"]
+        user=user_models.Users(**req)
         db.add(user)
         db.commit()
         return {"detail":"user created"}
