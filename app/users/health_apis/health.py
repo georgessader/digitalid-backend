@@ -21,7 +21,7 @@ async def uploadDocument(
 ):
     db=next(db_session())
     try:
-        file_location = os.path.join(f"uploads/health/{user}", file.filename)
+        file_location = os.path.join(f"../digitalid/public/uploads/health/{user}", file.filename)
         os.makedirs(os.path.dirname(file_location), exist_ok=True)
         with open(file_location, "wb") as file_object:
             file_object.write(file.file.read())
