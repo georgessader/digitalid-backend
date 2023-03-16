@@ -142,7 +142,7 @@ def verifyHealth(user_id:str,token:str,req:schemas.verifyHealth):
         elif req.health_report_verified==False:
             insurance_status="rejected"
         values=req.dict(exclude_none=True)
-        del req["health_id"]
+        del values["health_id"]
         data={
             **values,
             "health_report_verification_status":health_report_status if health_report_status!="" else health.first().health_report_education_status,
