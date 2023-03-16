@@ -123,7 +123,7 @@ def verifyHealth(user_id:str,token:str,req:schemas.verifyHealth):
     db=next(db_session())
     try:
         checkAdmin(token)
-        health=db.query(models.Health).filter(models.Health.user==user_id)
+        health=db.query(models.Health).filter(models.Health.user==user_id, models.Health.id==req.health_id)
         if not health.first():
             raise HTTPException(status_code=400, detail="Health does not exist.")
         health_report_status=""

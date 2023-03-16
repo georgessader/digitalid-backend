@@ -112,7 +112,7 @@ def verifyCareer(user_id:str,token:str,req:schemas.verifyCareer):
     db=next(db_session())
     try:
         checkAdmin(token)
-        career=db.query(models.Career).filter(models.Career.user==user_id)
+        career=db.query(models.Career).filter(models.Career.user==user_id, models.Career.id==req.career_id)
         if not career.first():
             raise HTTPException(status_code=400, detail="Career does not exist.")
         cv_status=""

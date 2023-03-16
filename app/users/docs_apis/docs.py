@@ -13,6 +13,12 @@ routes=APIRouter(
 
 @routes.post("/create")
 def RequestDocument(req:schemas.requestDoc):
+    """
+    **Documents type:**\n
+    1-  Driving license\n
+    2-  Passport\n
+    3-  Crminal history\n
+    """
     db=next(db_session())
     try:
         #req.status="pending"

@@ -20,6 +20,7 @@ class updateEducation(BaseModel):
     college_name : Optional[str]
 
 class verifyEducation(BaseModel):
+    education_id : str=Query(...)
     grade_verified : Optional[bool]
     certificate_verified : Optional[bool]
 

@@ -20,5 +20,6 @@ class updateCareer(BaseModel):
     company_name : Optional[str]
 
 class verifyCareer(BaseModel):
+    career_id : str=Query(...)
     cv_verified : Optional[bool]
     cover_letter_verified : Optional[bool]

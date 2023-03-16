@@ -111,7 +111,7 @@ def verifyEducation(user_id:str,token:str,req:schemas.verifyEducation):
     db=next(db_session())
     try:
         checkAdmin(token)
-        education=db.query(models.Education).filter(models.Education.user==user_id)
+        education=db.query(models.Education).filter(models.Education.user==user_id, models.Education.id==req.education_id)
         if not education.first():
             raise HTTPException(status_code=400, detail="Education does not exist.")
         grade_status=""

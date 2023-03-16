@@ -16,6 +16,7 @@ class updateHealth(BaseModel):
     nssf_number : Optional[str]
 
 class verifyHealth(BaseModel):
+    health_id : str = Query(...)
     health_report_verified : Optional[bool]
     vaccination_verified : Optional[bool]
     insurance_verified : Optional[bool]
