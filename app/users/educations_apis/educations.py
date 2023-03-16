@@ -127,7 +127,7 @@ def verifyEducation(user_id:str,token:str,req:schemas.verifyEducation):
         values=req.dict(exclude_none=True)
         del values["education_id"]
         data={
-            **req.dict(exclude_none=True),
+            **values,
             "grade_verification_status":grade_status if grade_status!="" else education.first().grade_verification_status,
             "certificate_verification_status":certificate_status if certificate_status!="" else education.first().certificate_verification_status
         }
