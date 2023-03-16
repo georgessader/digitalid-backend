@@ -125,8 +125,10 @@ def verifyCareer(user_id:str,token:str,req:schemas.verifyCareer):
             cover_status="verified"
         elif req.cover_letter_verified==False:
             cover_status="rejected"
+        values=req.dict(exclude_none=True)
+        del values["career_id"]
         data={
-            **req.dict(exclude_none=True),
+            **values,
             "cv_verification_status":cv_status if cv_status!="" else career.first().cv_verification_status,
             "cover_letter_verification_status":cover_status if cover_status!="" else career.first().cover_letter_verification_status
         }
